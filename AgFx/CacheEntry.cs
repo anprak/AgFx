@@ -811,6 +811,19 @@ namespace AgFx
                 iupd.IsUpdating = false;
             }
 
+            ModelItemBase mib = ValueInternal as ModelItemBase;
+
+            if (mib != null)
+            {
+                try
+                {
+                    mib.OnLoadCompleted(ex, false);
+                }
+                catch (Exception)
+                {
+                }
+            }
+
             LoaderType loaderType = loader != null ? loader.LoaderType : LoaderType.CacheLoader;
            
             //  UpdateCompletionHandler makes sure to call handler on UI thread
@@ -1382,19 +1395,11 @@ namespace AgFx
         /// </summary>
         internal class LiveValueLoader : ValueLoader
         {
-            private static TimeSpan RetryTimeout = TimeSpan.FromSeconds(60);
-
-            /// <summary>
-            /// If a load fails, we wait 60 seconds before retrying it.  The avoids
-            /// reload loops.
-            /// </summary>
-            private DateTime? _loadRetryTime;
-
             public override bool IsValid
             {
                 get
                 {
-                    if (LoadState == DataLoadState.Failed && _loadRetryTime.GetValueOrDefault() > DateTime.Now)
+                    if (LoadState == DataLoadState.Failed)
                     {
                         return false;
                     }
@@ -1476,7 +1481,6 @@ namespace AgFx
                 // the live load failed, set our retry limit.
                 //
                 Debug.WriteLine("Live load failed for {0} (ID={2}) Message={1}", exception.ObjectType.Name, exception.Message, exception.LoadContext.Identity);
-                _loadRetryTime = DateTime.Now.Add(RetryTimeout);
                 LoadState = DataLoadState.Failed;
                 OnLoadFailed(exception);
             }
@@ -1490,7 +1494,6 @@ namespace AgFx
 
             public override void Reset()
             {
-                _loadRetryTime = null;
                 UpdateTime = DateTime.MinValue;
                 base.Reset();
             }

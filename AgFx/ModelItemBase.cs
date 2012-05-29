@@ -185,6 +185,10 @@ namespace AgFx
             }
             return base.GetHashCode();
         }
+
+        protected internal virtual void OnLoadCompleted(Exception error, bool cancelled)
+        {
+        }
     }
 
 
