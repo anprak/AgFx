@@ -11,7 +11,6 @@ using System.Threading;
 using System.Reflection;
 using System.Linq;
 using System.Runtime.Serialization;
-using System.Windows.Threading;
 
 namespace AgFx
 {
@@ -19,23 +18,20 @@ namespace AgFx
     /// Base class for INotifyPropertyChanged implementation.  Gives a RaisePropertyChanged method 
     /// for notifying changes as well a facilities for thread switching and change notification cascading.
     /// </summary>
- 
-   [DataContract]   
+
+    [DataContract]
     public abstract class NotifyPropertyChangedBase : INotifyPropertyChanged
     {
-
-        private static int? _UiThreadId;
+        private readonly bool _notifyOnUiThread;
 
         /// <summary>
         /// A static set of argument instances, one per property name.
         /// </summary>
         private static readonly Dictionary<string, PropertyChangedEventArgs> _argumentInstances = new Dictionary<string, PropertyChangedEventArgs>();
- 
-        private static Dictionary<Type, Dictionary<string, List<string>>> _typeDependentProperties = new Dictionary<Type,Dictionary<string,List<string>>>();
+
+        private static Dictionary<Type, Dictionary<string, List<string>>> _typeDependentProperties = new Dictionary<Type, Dictionary<string, List<string>>>();
 
         private Dictionary<string, List<string>> _dependentProps;
-
-        private int? _contextThreadId;
 
         private static object PropertyNotifyLock = new object();
 
@@ -44,66 +40,15 @@ namespace AgFx
         /// </summary>
         public event PropertyChangedEventHandler PropertyChanged;
 
-        private SynchronizationContext _context;
-
-        /// <summary>
-        /// Helper for determining if the current thread is the thread that notifications shoudl be fired on.
-        /// </summary>
-        protected bool IsOnNotificationThread
-        {
-            get
-            {
-                if (NotificationContext == null)
-                {
-                    return false;
-                }                
-                return this._contextThreadId.HasValue && _contextThreadId.Value == Thread.CurrentThread.ManagedThreadId;
-            }
-        }
-                
-
-
-        /// <summary>
-        /// The notification context on which to fire notifications.  This defaults to the UI thread's context.
-        /// </summary>
-        protected SynchronizationContext NotificationContext
-        {
-            get
-            {
-                return _context;
-            }
-            set
-            {
-                if (_context != value)
-                {
-                    _context = value;
-
-                    // try to grab the UI thread
-                    //
-                    EnsureUiThreadId();
-                    
-                    // see if we're on the UI thread
-                    //
-                    if (value != null && value == DispatcherSynchronizationContext.Current) {
-                        _contextThreadId = _UiThreadId;
-                    }
-
-                    // If we are on the thread that is being set, snap the thread id.
-                    //
-                    if (value != null && value == SynchronizationContext.Current) {
-                        _contextThreadId = Thread.CurrentThread.ManagedThreadId;
-                    }
-                }
-            }
-        }
-
         /// <summary>
         /// Default constructor.
         /// </summary>
-        public NotifyPropertyChangedBase() : this(true) {
+        public NotifyPropertyChangedBase()
+            : this(true)
+        {
 
         }
-        
+
         /// <summary>
         /// Ctor with thread selection
         /// </summary>
@@ -112,45 +57,43 @@ namespace AgFx
         {
             InitializeDependentProperties();
 
-            if (notifyOnUiThread) {
-                NotificationContext = DispatcherSynchronizationContext.Current;            
-            }
+            _notifyOnUiThread = notifyOnUiThread;
         }
 
-        private void EnsureUiThreadId() {
-
-            if (_UiThreadId == null && SynchronizationContext.Current != null && SynchronizationContext.Current == DispatcherSynchronizationContext.Current) {
-                _UiThreadId = Thread.CurrentThread.ManagedThreadId;            
-            }
-        }
-        
         /// <summary>
         /// Walk through the dependent property attributes, and add them to the 
         /// data structure.
         /// </summary>
-        private void InitializeDependentProperties() {
+        private void InitializeDependentProperties()
+        {
 
             Type t = GetType();
 
-            lock (t) {
-                if (!_typeDependentProperties.ContainsKey(t)) {
+            lock (t)
+            {
+                if (!_typeDependentProperties.ContainsKey(t))
+                {
 
                     var propertyLookup = new Dictionary<string, List<string>>();
 
-                    var props = t.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    var props = t.GetRuntimeProperties();
 
-                    foreach (var prop in props) {
+                    foreach (var prop in props)
+                    {
                         var attrs = from a in prop.GetCustomAttributes(typeof(DependentOnPropertyAttribute), true)
                                     where a is DependentOnPropertyAttribute
                                     select (DependentOnPropertyAttribute)a;
 
 
 
-                        foreach (var dopa in attrs) {
+                        foreach (var dopa in attrs)
+                        {
 
-                            if (!String.IsNullOrEmpty(dopa.PrimaryPropertyName)) {
+                            if (!String.IsNullOrEmpty(dopa.PrimaryPropertyName))
+                            {
 
-                                if (!dopa.IsNotARealPropertyName && !props.Any(p => p.Name == dopa.PrimaryPropertyName)) {
+                                if (!dopa.IsNotARealPropertyName && !props.Any(p => p.Name == dopa.PrimaryPropertyName))
+                                {
                                     throw new ArgumentException(String.Format("PrimaryPropertyName {0} not found on type {1}", dopa.PrimaryPropertyName, t.Name));
                                 }
                                 AddDependentProperty(propertyLookup, dopa.PrimaryPropertyName, prop.Name);
@@ -164,20 +107,23 @@ namespace AgFx
             }
         }
 
-        private Dictionary<string, List<string>> GetPropertyLookup() {
-         
-            if (_dependentProps != null) {
+        private Dictionary<string, List<string>> GetPropertyLookup()
+        {
+
+            if (_dependentProps != null)
+            {
                 return _dependentProps;
             }
-            else if (_typeDependentProperties.ContainsKey(GetType())) {
+            else if (_typeDependentProperties.ContainsKey(GetType()))
+            {
                 return _typeDependentProperties[GetType()];
             }
             return null;
         }
 
 
-      
-        
+
+
         private void AddDependentProperty(Dictionary<string, List<string>> propertyLookup, string primaryPropertyName, string dependantPropertyName)
         {
             List<string> dependantProps;
@@ -266,19 +212,21 @@ namespace AgFx
                         handler(this, args);
 
                         var depenentProps = GetPropertyLookup();
-                        if (depenentProps != null) {
+                        if (depenentProps != null)
+                        {
 
                             // recurse on dependents
                             //
                             List<string> dependents;
 
-                            if (depenentProps.TryGetValue(propertyName, out dependents)) {
-                                if (handler != null) {
-                                    dependents.ForEach(p =>
+                            if (depenentProps.TryGetValue(propertyName, out dependents))
+                            {
+                                if (handler != null)
+                                {
+                                    foreach (string p in dependents)
                                     {
                                         RaisePropertyChanged(p);
                                     }
-                                   );
                                 }
                             }
                         }
@@ -289,28 +237,17 @@ namespace AgFx
             }
         }
 
-        private void InvokeOnContext(Action a) {
-
-            if (!IsOnNotificationThread && _context != null)
+        private void InvokeOnContext(Action a)
+        {
+            if (_notifyOnUiThread)
             {
-                _context.Post(
-                    (state) =>
-                    {
-                        // snap the thread ID.
-                        if (_contextThreadId == null)
-                        {
-                            _contextThreadId = Thread.CurrentThread.ManagedThreadId;
-                        }
-                        PriorityQueue.AddUiWorkItem(a, true);                        
-                    },
-                    null
-                );
+                PriorityQueue.AddUiWorkItem(a, true);
             }
             else
             {
                 a();
             }
-            
+
         }
 
     }

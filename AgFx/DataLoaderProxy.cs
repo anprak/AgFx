@@ -76,11 +76,11 @@ namespace AgFx {
         private static MethodInfo FindMethodWorker(Type dataLoaderType, string methodName, params Type[] paramTypes) {
             // get the type of the attribute.
             //
-            var dataLoaderInterface = (from i in dataLoaderType.GetInterfaces()
-                                       where i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDataLoader<>)
+            var dataLoaderInterface = (from i in dataLoaderType.GetTypeInfo().ImplementedInterfaces
+                                       where i.IsConstructedGenericType && i.GetGenericTypeDefinition() == typeof(IDataLoader<>)
                                        select i).First();
 
-            Type contextType = dataLoaderInterface.GetGenericArguments()[0];
+            Type contextType = dataLoaderInterface.GetTypeInfo().GenericTypeArguments[0];
 
             for (int i = 0; i < paramTypes.Length; i++) {
                 if (paramTypes[i] == typeof(DataLoaderProxy)) {
@@ -88,7 +88,7 @@ namespace AgFx {
                 }
             }
 
-            var mi = dataLoaderType.GetMethod(methodName, paramTypes);
+            var mi = dataLoaderType.GetRuntimeMethod(methodName, paramTypes);
             Debug.Assert(mi != null, String.Format("Couldn't find {0} on {1}", methodName, dataLoaderType.FullName));
             return mi;
         }

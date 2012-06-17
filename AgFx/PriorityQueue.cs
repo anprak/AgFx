@@ -8,8 +8,11 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Windows;
-using System.Windows.Threading;
 using System.Diagnostics;
+using Windows.UI.Core;
+using Windows.UI.Xaml;
+using Windows.System.Threading;
+using System.Threading.Tasks;
 
 namespace AgFx
 {
@@ -22,7 +25,7 @@ namespace AgFx
 
         private class WorkerThread : IDisposable
         {
-            Thread t;
+            Task t;
             Queue<Action> q = new Queue<Action>();
             AutoResetEvent e = new AutoResetEvent(false);
 
@@ -33,13 +36,11 @@ namespace AgFx
             {
                 _name = name;
                 SleepyTime = sleepyTime;
-                t = new Thread(WorkerThreadProc);
-                t.Name = _name;
-                t.IsBackground = true;
+                t = new Task(WorkerThreadProc);
                 t.Start();
             }
 
-            private void WorkerThreadProc(object state)
+            private async void WorkerThreadProc()
             {
                 while (true)
                 {
@@ -58,14 +59,14 @@ namespace AgFx
                                 if (item != null)
                                 {
                                     var workItem = item;
-                                    ThreadPool.QueueUserWorkItem(
+                                    ThreadPool.RunAsync(
                                         (s) =>
                                         {
 
                                             workItem();
                                         }
                                     );
-                                    Thread.Sleep(SleepyTime);
+                                    await Task.Delay(SleepyTime);
                                 }
                         }
                         
@@ -85,7 +86,7 @@ namespace AgFx
             }
 
             public void Dispose() {
-                e.Close();
+                e.Dispose();
             }
         }
 
@@ -98,7 +99,7 @@ namespace AgFx
         {   
         }
 
-        private static Dispatcher _dispatcher;
+        private static CoreDispatcher _dispatcher;
 
 
 #if false
@@ -128,17 +129,17 @@ namespace AgFx
 
             if (_dispatcher == null)
             {
-                _dispatcher = Deployment.Current.Dispatcher;
+                _dispatcher = ThreadingHelper.Dispatcher;
                 Debug.Assert(_dispatcher != null);
             }
 
-            if (checkThread && _dispatcher.CheckAccess())
+            if (checkThread && _dispatcher.HasThreadAccess)
             {
                 workitem();
             }
             else
             {
-                _dispatcher.BeginInvoke(workitem);
+                _dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => workitem());
             }
         }
 
@@ -152,11 +153,10 @@ namespace AgFx
 
         private static void AddThreadPoolItem(Action item)
         {
-            ThreadPool.QueueUserWorkItem(
+            ThreadPool.RunAsync(
                 (state) => {
                     item();
-                },
-                null
+                }
             );
         }
 

@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Windows.Data;
+using Windows.UI.Xaml.Data;
 
 namespace AgFx.Converters {
 
@@ -14,9 +14,9 @@ namespace AgFx.Converters {
         /// <param name="value">Must be a bool.</param>
         /// <param name="targetType"></param>
         /// <param name="parameter"></param>
-        /// <param name="culture"></param>
+        /// <param name="language"></param>
         /// <returns>The opposite of (bool)value.</returns>
-        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) {
+        public object Convert(object value, Type targetType, object parameter, string language) {
             if (value is bool) {
                 return !(bool)value;
             }
@@ -31,7 +31,8 @@ namespace AgFx.Converters {
         /// <param name="parameter"></param>
         /// <param name="culture"></param>
         /// <returns></returns>
-        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) {
+        public object ConvertBack(object value, Type targetType, object parameter, string language)
+        {
             throw new NotImplementedException();
         }
     }

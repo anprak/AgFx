@@ -27,7 +27,7 @@ namespace AgFx
         /// <param name="sw"></param>
         public static void Serialize(object obj, TextWriter sw)
         {        
-            var rwProps = from p in obj.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            var rwProps = from p in obj.GetType().GetRuntimeProperties()
                         where p.CanRead && p.CanWrite
                         select p;
 
@@ -37,7 +37,7 @@ namespace AgFx
             {
                 object value = prop.GetValue(obj, null);
 
-                if (typeof(IConvertible).IsAssignableFrom(prop.PropertyType))
+                if (prop.PropertyType.IConvertibleIsAssignableFrom())
                 {
                     if (value != null)
                     {
@@ -70,9 +70,7 @@ namespace AgFx
                 throw new ArgumentException(String.Format("Trying to deserialize {0}, data is for {1}", obj.GetType().Name, typeFullname));
             }
 
-            var rwProps = from p in obj.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public)
-                          where p.CanRead && p.CanWrite
-                          select p;
+            var rwProps = obj.GetType().GetPublicInstanceReadWriteProperties();
 
             Dictionary<string, PropertyInfo> propHash = new Dictionary<string, PropertyInfo>();
 
@@ -149,7 +147,7 @@ namespace AgFx
                 // otherwise use reflection to copy the values over.
                 //
 
-                foreach (var prop in destType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+                foreach (var prop in destType.GetRuntimeProperties())
                 {
                     try
                     {

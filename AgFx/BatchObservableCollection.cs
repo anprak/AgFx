@@ -11,7 +11,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
-using System.Windows.Threading;
+using Windows.UI.Xaml;
 
 namespace AgFx
 {
@@ -51,7 +51,7 @@ namespace AgFx
         {
             get
             {
-                return Deployment.Current.Dispatcher.CheckAccess();
+                return ThreadingHelper.Dispatcher.HasThreadAccess;
             }
         }
 
@@ -86,7 +86,7 @@ namespace AgFx
                 PriorityQueue.AddUiWorkItem(() =>
                 {
                     _timer = new DispatcherTimer();
-                    _timer.Tick += new EventHandler(Timer_Tick);
+                    _timer.Tick += Timer_Tick;
                     _timer.Interval = TimeBetweenBatches;
 
                     if (_batchItems.Count > 0)
@@ -101,7 +101,7 @@ namespace AgFx
         /// This timer serves as the mechanism for batching.  We'll a batch
         /// of items at each tick.
         /// </summary>
-        void Timer_Tick(object sender, EventArgs e)
+        void Timer_Tick(object sender, object e)
         
         {            
             _dequeuing = true;

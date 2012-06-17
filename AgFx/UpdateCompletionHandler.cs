@@ -151,20 +151,12 @@ namespace AgFx
                     if (loadResult.Error != null && !errorHandlerCalled)
                     {
 #if DEBUG
-                        var st = _cacheEntry.LastLoadStackTrace;
-                        _cacheEntry.LastLoadStackTrace = null;
-
                         Debug.WriteLine("{4}: FAIL loading {0} (ID={1}).  Exception {2} Message={3}",
                             _cacheEntry.ObjectType.Name, 
                             _cacheEntry.LoadContext.Identity,
                             loadResult.Error.GetType().Name, 
                             loadResult.Error.Message, 
                             DateTime.Now);
-
-                        if (st != null)
-                        {
-                            Debug.WriteLine("Load initiated from:\r\n" + st);
-                        }
 #endif
                         if (UnhandledError != null)
                         {

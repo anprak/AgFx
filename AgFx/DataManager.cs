@@ -11,6 +11,8 @@ using System.Reflection;
 using System.Windows;
 using System.IO;
 using System.Threading;
+using Windows.UI.Xaml;
+using System.Threading.Tasks;
 
 namespace AgFx {
     /// <summary>
@@ -21,7 +23,7 @@ namespace AgFx {
         /// <summary>
         /// Event handler for handling any errors not caught by a method level handler (e.g. Load(id, success, error).
         /// </summary>
-        public event EventHandler<ApplicationUnhandledExceptionEventArgs> UnhandledError;
+        public event EventHandler<DataManagerUnhandledExceptionEventArgs> UnhandledError;
 
         private static readonly DataManager _current = new DataManager();
 
@@ -145,7 +147,7 @@ namespace AgFx {
                             // someetimes exceptions come out of the isostore stack trying to get the directory names,
                             // so we just wait a bit and try again.
                             //
-                            Thread.Sleep(50);
+                            Task.Delay(50).Wait();
                         }
                     }
 
@@ -253,7 +255,7 @@ namespace AgFx {
         /// <param name="id"></param>
         /// <returns></returns>
         public object Load(Type objectType, object id) {
-            var methodInfo = (from m in this.GetType().GetMethods()
+            var methodInfo = (from m in this.GetType().GetRuntimeMethods()
                               where m.Name == "Load" && m.ContainsGenericParameters && m.GetParameters().Length == 3
                               select m).First();
 
@@ -320,9 +322,9 @@ namespace AgFx {
 
         private void OnUnhandledError(Exception ex) {
             if (ShouldLogUnhandledErrors) {
-                ErrorLog.WriteError("An unhandled error occurred", ex);
+                ErrorLog.WriteErrorAsync("An unhandled error occurred", ex);
             }
-            ApplicationUnhandledExceptionEventArgs e = new ApplicationUnhandledExceptionEventArgs(ex, false);
+            DataManagerUnhandledExceptionEventArgs e = new DataManagerUnhandledExceptionEventArgs(ex, false);
             if (UnhandledError != null) {
                 UnhandledError(this, e);
             }
@@ -491,7 +493,7 @@ namespace AgFx {
         /// <param name="item"></param>
         internal void Refresh(IUpdatable item) {
 
-            var methodInfo = (from m in this.GetType().GetMethods()
+            var methodInfo = (from m in this.GetType().GetRuntimeMethods()
                               where m.Name == "Refresh" && m.ContainsGenericParameters
                               select m).First();
 
@@ -681,7 +683,7 @@ namespace AgFx {
 
                 bool hasLoadContextProperty = false;
 
-                var loadContextProps = from pi in typeof(T).GetProperties(BindingFlags.Instance | BindingFlags.Public)
+                var loadContextProps = from pi in typeof(T).GetRuntimeProperties()
                                        where typeof(LoadContext).IsAssignableFrom(pi.PropertyType) && pi.Name == "LoadContext"
                                        select pi;
 
@@ -691,7 +693,7 @@ namespace AgFx {
 
                     // check the type's ctor.
                     //
-                    var ctors = from c in lcType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+                    var ctors = from c in lcType.GetTypeInfo().DeclaredConstructors
                                 where c.GetParameters() != null &&
                                       c.GetParameters().Length == 1 &&
                                       c.GetParameters()[0].ParameterType.IsInstanceOfType(value)
@@ -931,9 +933,6 @@ namespace AgFx {
         /// <param name="value"></param>
         private void SetupCompletedCallback<T>(Action<T> completed, Action<Exception> error, CacheEntry value) where T : new() {
                 value.NextCompletedAction.Subscribe(completed, error);
-#if DEBUG
-                value.LastLoadStackTrace = new StackTrace();
-#endif
         }
 
         /// <summary>
@@ -960,10 +959,10 @@ namespace AgFx {
                 }
             }
 
-            var attrs = objectType.GetCustomAttributes(typeof(DataLoaderAttribute), true);
+            var attrs = objectType.GetTypeInfo().GetCustomAttributes(typeof(DataLoaderAttribute), true);
 
-            if (attrs.Length > 0) {
-                DataLoaderAttribute dla = (DataLoaderAttribute)attrs[0];
+            if (attrs.Any()) {
+                DataLoaderAttribute dla = (DataLoaderAttribute)attrs.First();
 
                 if (dla.DataLoaderType != null) {
                     loader = Activator.CreateInstance(dla.DataLoaderType);
@@ -977,7 +976,7 @@ namespace AgFx {
                 //
                 for (Type modelType = objectType; 
                     loader == null && modelType != typeof(object); 
-                    modelType = modelType.BaseType) {
+                    modelType = modelType.GetTypeInfo().BaseType) {
 
                     // see if we already have a loader at this level
                     //
@@ -985,11 +984,11 @@ namespace AgFx {
                         break;
                     }
 
-                    var loaders = from nt in modelType.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic)
-                                  where nt.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDataLoader<>))
+                    var loaders = from nt in modelType.GetTypeInfo().DeclaredNestedTypes
+                                  where nt.ImplementedInterfaces.Any(i => i.IsConstructedGenericType && i.GetGenericTypeDefinition() == typeof(IDataLoader<>))
                                   select nt;
 
-                    Type loaderType = loaders.FirstOrDefault();
+                    Type loaderType = loaders.FirstOrDefault().AsType();
 
                     if (loaderType != null) {
                         loader = Activator.CreateInstance(loaderType);                                                                    

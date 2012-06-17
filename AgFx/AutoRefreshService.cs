@@ -50,7 +50,7 @@ namespace AgFx {
         private void EnsureTimer() {
             if (_timer == null) {
                 _timer = new Timer(
-                    (state) =>
+                    () =>
                     {
                         // protect against reentrancy
                         //

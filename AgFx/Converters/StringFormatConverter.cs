@@ -7,7 +7,7 @@
 
 using System;
 using System.Globalization;
-using System.Windows.Data;
+using Windows.UI.Xaml.Data;
 
 namespace AgFx.Converters {
     /// <summary>
@@ -25,28 +25,23 @@ namespace AgFx.Converters {
         /// Converts the given value to the specified format, in parameter.
         /// </summary>
         /// <param name="value"/>
-        /// <param name="culture"/>
+        /// <param name="language"/>
         /// <param name="targetType"/>
         /// <param name="parameter">A string format specifier like {0:x} or {0:0.00}</param>
         /// <returns></returns>
-        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        public object Convert(object value, Type targetType, object parameter, string language)
         {
             if (value == null || (value is string && ((string)value).Length == 0)) {
                 return "";
             }
-            
-            if (culture == null)
-            {
-                culture = CultureInfo.CurrentCulture;
-            }
 
-            return String.Format(culture, (string)parameter, value);
+            return String.Format(language != null ? new CultureInfo(language) : CultureInfo.CurrentCulture, (string)parameter, value);
         }
 
         /// <summary>
         /// Not implemented
         /// </summary>
-        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        public object ConvertBack(object value, Type targetType, object parameter, string language)
         {
             throw new NotImplementedException();
         }

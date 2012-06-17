@@ -6,6 +6,7 @@
 
 using System;
 using System.Runtime.Serialization;
+using System.Reflection;
 
 namespace AgFx {
 
@@ -60,7 +61,7 @@ namespace AgFx {
 
             string uniqueKey;
 
-            if (_id is string || _id.GetType().IsPrimitive) {
+            if (_id is string || _id.GetType().GetTypeInfo().IsPrimitive) {
                 uniqueKey = _id.ToString();
             }
             else {

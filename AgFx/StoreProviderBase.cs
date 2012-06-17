@@ -7,6 +7,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System;
+using System.Threading.Tasks;
 
 namespace AgFx {
 
@@ -40,9 +41,8 @@ namespace AgFx {
         /// </summary>
         /// <param name="uniqueName">a unique key.</param>
         /// <returns>A set of CacheItemInfo objects</returns>
-        public virtual IEnumerable<CacheItemInfo> GetItems(string uniqueName) {
-
-
+        public virtual IEnumerable<CacheItemInfo> GetItems(string uniqueName)
+        {
             var matchingItems = from i in GetItems()
                                 where uniqueName == i.UniqueName
                                 select i;
@@ -62,7 +62,8 @@ namespace AgFx {
         /// </summary>
         /// <param name="uniqueName"></param>
         /// <returns></returns>
-        public virtual CacheItemInfo GetLastestExpiringItem(string uniqueName) {
+        public virtual CacheItemInfo GetLastestExpiringItem(string uniqueName)
+        {
             try {
 
                 var newestItem = GetItems(uniqueName).

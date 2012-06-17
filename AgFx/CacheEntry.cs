@@ -8,6 +8,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Windows.ApplicationModel;
+using System.Reflection;
+using System.Threading.Tasks;
 
 namespace AgFx
 {
@@ -44,10 +47,6 @@ namespace AgFx
         // Completion notifications
         public UpdateCompletionHandler NextCompletedAction { get; private set; }
         private readonly Action<CacheEntry> _proxyComplitionCallback;
-
-#if DEBUG
-        public StackTrace LastLoadStackTrace { get; set; }
-#endif
 
         // Object information
         //
@@ -304,7 +303,7 @@ namespace AgFx
             // do this to prevent AgFx crashing the design surface if called from a 
             // UserControl ctor.
             //
-            if (System.ComponentModel.DesignerProperties.IsInDesignTool) {
+            if (DesignMode.DesignModeEnabled) {
                 return null;
             }
 
@@ -429,7 +428,7 @@ namespace AgFx
                 {
                     // check the cache policy
                     //
-                    var cpattributes = ObjectType.GetCustomAttributes(typeof(CachePolicyAttribute), true);
+                    var cpattributes = ObjectType.GetTypeInfo().GetCustomAttributes(typeof(CachePolicyAttribute), true);
 
                     cpa = (CachePolicyAttribute)cpattributes.FirstOrDefault();
 
