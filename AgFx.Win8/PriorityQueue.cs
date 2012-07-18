@@ -129,6 +129,7 @@ namespace AgFx
 
             if (_dispatcher == null)
             {
+                ThreadingHelper.Initialize();
                 _dispatcher = ThreadingHelper.Dispatcher;
                 Debug.Assert(_dispatcher != null);
             }
