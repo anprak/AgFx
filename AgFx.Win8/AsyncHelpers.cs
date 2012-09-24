@@ -13,29 +13,8 @@ namespace AgFx
         /// <param name="task">Task<T> method to execute</param>
         public static void RunSynchronouslyEx(this Task task)
         {
-            task.RunSynchronously();
-            //var oldContext = SynchronizationContext.Current;
-            //var synch = new ExclusiveSynchronizationContext();
-            //SynchronizationContext.SetSynchronizationContext(synch);
-            //synch.Post(async _ =>
-            //{
-            //    try
-            //    {
-            //        await task;
-            //    }
-            //    catch (Exception e)
-            //    {
-            //        synch.InnerException = e;
-            //        throw;
-            //    }
-            //    finally
-            //    {
-            //        synch.EndMessageLoop();
-            //    }
-            //}, null);
-            //synch.BeginMessageLoop();
-
-            //SynchronizationContext.SetSynchronizationContext(oldContext);
+            task.Wait();
+            return;
         }
 
         /// <summary>
@@ -46,31 +25,8 @@ namespace AgFx
         /// <returns></returns>
         public static T RunSynchronouslyEx<T>(this Task<T> task)
         {
-            task.RunSynchronously();
+            task.Wait();
             return task.Result;
-            //var oldContext = SynchronizationContext.Current;
-            //var synch = new ExclusiveSynchronizationContext();
-            //SynchronizationContext.SetSynchronizationContext(synch);
-            //T ret = default(T);
-            //synch.Post(async _ =>
-            //{
-            //    try
-            //    {
-            //        ret = await task;
-            //    }
-            //    catch (Exception e)
-            //    {
-            //        synch.InnerException = e;
-            //        throw;
-            //    }
-            //    finally
-            //    {
-            //        synch.EndMessageLoop();
-            //    }
-            //}, null);
-            //synch.BeginMessageLoop();
-            //SynchronizationContext.SetSynchronizationContext(oldContext);
-            //return ret;
         }
 
         private class ExclusiveSynchronizationContext : SynchronizationContext
